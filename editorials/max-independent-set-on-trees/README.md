@@ -406,11 +406,13 @@ Thus:
 
 # Implementation
 
-A C++ implementation is provided in:
+A complete C++ implementation using DFS-based tree DP
+is provided in:
 
-```
-solution.cpp
-```
+- [`solution.cpp`](solution.cpp)
+
+The implementation runs in **O(n)** time and uses
+adjacency lists with post-order traversal.
 
 ---
 
