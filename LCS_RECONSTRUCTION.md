@@ -129,3 +129,244 @@ The DP table construction dominates, so the total time complexity is: $O(mn)$
 - DP table requires $O(mn)$ space.
 - Result string stores at most $O(\min(m, n))$ characters.
 - Thus total space complexity is: $O(mn)$
+
+---
+***
+
+# LCS: Space Optimization and Divide & Conquer Reconstruction
+
+In the previous editorial, we discussed how to reconstruct the LCS using the full $O(mn)$ DP table.
+
+In this section, we will discuss:
+
+1. How LCS length can be computed in $O(\min(m,n))$ space
+2. Why that trick does not directly help in reconstruction
+3. A Divide & Conquer method that reconstructs LCS in
+    - $O(mn)$ time
+    - $O(m+n)$ space
+
+## 1. **Space Optimization for LCS Length**
+
+$$
+dp[i][j] = \begin{cases}1 + dp[i - 1][j - 1] & \text{if } X[i] = Y[j] \\\max(dp[i - 1][j], dp[i][j - 1]) & \text{otherwise}\end{cases}
+$$
+
+If we observe carefully, to compute row $i$, we only need:
+
+- The previous row ($i-1$)
+- The current row
+
+This means we do not need the entire $m \times n$ table.
+
+We can keep only two rows:
+
+- $prev[0..n]$
+- $curr[0..n]$
+
+After finishing a row, we copy curr into prev and move forward.
+
+Thus, space reduces to: $O(min⁡(m,n))$
+
+while time remains: $O(mn)$
+
+### Intuition
+
+Each DP cell depends only on:
+
+- Left neighbor (same row)
+- Top neighbor (previous row)
+- Top-left neighbor (previous row)
+
+So storing more than one previous row is unnecessary for computing only length.
+
+## 2. Why This Trick Does Not Work for Reconstruction
+
+When reconstructing LCS using backtracking, we rely on the entire DP table.
+
+While backtracking from $(m,n)$, we need to know:
+
+- Whether we came from top
+- Or from left
+- Or from diagonal
+
+If we only store two rows, all earlier decisions are lost.
+
+So although we can compute the length in small space, we cannot reconstruct the sequence because:
+
+- Reconstruction requires historical DP information.
+- Space-optimized DP overwrites previous rows.
+
+Therefore:
+
+- Length → possible in $O(\min(m,n))$ space
+- Reconstruction → needs more information
+
+## 3. Divide & Conquer Approach for LCS Reconstruction
+
+There exists a method that combines:
+
+- Space-optimized LCS-length DP
+- Divide & Conquer strategy
+
+It reconstructs LCS in:
+
+- Time: $O(mn)$
+- Space: $O(m+n)$
+
+### Idea
+
+Instead of storing the whole table, we:
+
+1. Divide string $X$ into two halves:
+    - First half: $X_{left}$
+    - Second half: $X_{right}$
+2. Compute:
+    - Forward LCS length between $X_{left}$ and $Y$
+    - Backward LCS length between reversed $X_{right}$ and reversed $Y$
+3. Combine the two results to find a split point in $Y$.
+4. Recursively apply the same idea to the two halves.
+
+### Why This Works
+
+The key idea is:
+
+If we split $X$ into two halves, then the LCS must also split at some position in $Y$.
+
+We try all possible split positions in $Y$ indirectly using forward and backward DP.
+
+We choose the position that maximizes:
+
+$$
+L1[j]+L2[n−j]
+$$
+
+where:
+
+- $L_1[j]$ = LCS length of first half of $X$ with first $j$ chars of $Y$
+- $L_2[n-j]$ = LCS length of second half of $X$ with remaining chars of $Y$
+
+This guarantees we split correctly.
+
+Then we recursively reconstruct:
+
+- LCS of first half
+- LCS of second half
+
+Finally, concatenate both results.
+
+## **→ Pseudocode (Divide & Conquer Version)**
+
+```
+LCSd_q(X, Y):m ← length(X)
+n ← length(Y)
+
+if m == 0:
+    return ""
+
+if m == 1:
+    if X[1] appears in Y:
+        return X[1]
+    else:
+        return ""
+
+mid ← m / 2
+
+L1 ← LCS-Length(X[1..mid], Y)
+L2 ← LCS-Length(reverse(X[mid+1..m]), reverse(Y))
+
+Find k that maximizes:
+    L1[k] + L2[n-k]
+
+left_part  ← LCSd_q(X[1..mid], Y[1..k])
+right_part ← LCSd_q(X[mid+1..m], Y[k+1..n])
+
+return left_part + right_part
+```
+
+LCS-Length : using space-optimized $O(n)$ DP.
+
+### Time Complexity
+
+At each level:
+
+- We compute two LCS-length DP passes → $O(mn)$ total over recursion.
+- Recursion splits the problem roughly in half each time.
+
+Overall time:
+
+$$
+O(mn)
+$$
+
+### Space Complexity
+
+At any point:
+
+- We store only two rows → $O(n)$
+- Recursion stack depth → $O(\log m)$
+- Final string storage → $O(m+n)$
+
+Thus total space:
+
+$$
+O(m+n)
+$$
+
+which is much smaller than $O(mn)$.
+
+## → Advanced Section: Why Divide & Conquer is Correct
+
+### Key Observation
+
+Any LCS between $X$ and $Y$ must pass through some partition of $X$.
+
+If we split $X$ into two halves:
+
+$$
+X = X_{left} + X_{right}
+$$
+
+Then the LCS can be written as:
+
+$$
+LCS(X,Y) = LCS(X_{left}, Y_{left}) + LCS(X_{right}, Y_{right})
+$$
+
+for some partition of $Y$.
+
+The question is:
+
+How do we find that correct partition?
+
+### Forward and Backward Computation
+
+When we compute:
+
+- Forward LCS lengths from start
+- Backward LCS lengths from end
+
+We are effectively measuring:
+
+- Best possible match before split
+- Best possible match after split
+
+If we choose $k$ that maximizes:
+
+$$
+L_1[k] + L_2[n-k]
+$$
+
+we ensure:
+
+- The total length equals optimal LCS length.
+- The split is consistent with optimal substructure.
+
+### Why It Maintains Optimality
+
+LCS satisfies optimal substructure:
+
+If a solution is optimal, its subproblems must also be optimal.
+
+Since we split at the position that preserves total optimal length, recursive calls also operate on optimal subproblems.
+
+Thus correctness follows by induction on string length.
